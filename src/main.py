@@ -47,91 +47,93 @@ def topk_index(arr, k):
 # per hero
 
 # sim: similarity between item purchases
-# ideal evaluation: P(Exactly same purchase log)
+# ideal evaluation: P(Exactly same purchase log) 
 # @hp: actual hero-purchase counter dict array
 # @hp_rec: recommended hero-purchase counter dict array
 # @opt: aggregation function, average and etc
 # TODO: for diff heroes, we may have different weight when calc total similarity
 def team_purchase_sim_calc(hp, hp_rec, norm=False, aggr_opt='avg'):
     #print "len(hero purchase): " + str(len(hp))
-    sim_vec = []
-    tot_sim = 0
+    sim_vec=[]
+    tot_sim=0
     for (h, hpr) in zip(hp, hp_rec):
         #print h
         #print hpr
         # item purchase counter to feature vector
-        h, hpr = feature_vec(h, hpr)
+        h, hpr=feature_vec(h, hpr)
         # do normalization if needed
         if norm:
-            norm1 = np.linalg.norm(hp)
-            norm2 = np.linalg.norm(hpr)
-            h = h/norm1
-            hpr = hpr/norm2
+            norm1=np.linalg.norm(hp)
+            norm2=np.linalg.norm(hpr)
+            h=h/norm1
+            hpr=hpr/norm2
         # calc cosine similarity
-        sim = sp.distance.cosine(h, hpr)
+        sim=1-sp.distance.cosine(h, hpr)
         # append current hero item similarity
         sim_vec.append(sim)
     print "per hero similarity vector:"
     print sim_vec
-    if aggr_opt == 'avg':
+    if aggr_opt=='avg':
         #print len(hp)
         # the length should always be 5
-        assert(len(hp) == 5)
+        assert(len(hp)==5)
         #print "sim_vec: "
         #print sim_vec
-        tot_sim = sum(sim_vec)/len(sim_vec)
+        tot_sim=sum(sim_vec)/len(sim_vec)
     else:
         print "no such aggr function is pre defined!"
-        tot_sim = -1
+        tot_sim=-1
     return tot_sim
 
 # assumes: we have tot_count[h] that stores the avg total "vital" item purchased by hero h
 # assumes: dummy_is_vital(iid)
 # necissity evaluation
-# calculating probability
-def nec_eva(fpath, model, items, tot_count, pred=base_rec_h):
-    mcount = 0
-    sim_sum = 0
+# calculating probability 
+def nec_eva(fpath, model, items, tot_count, icosts, pred=base_rec_h):
+    mcount=0
+    sim_sum=0
     for fname in os.listdir(fpath):
-        data = json.load(open(fpath+fname))
-        wplayers = []
+        data=json.load(open(fpath+fname))
+        wplayers=[]
         # assumes: the first 5 is radiant hero
         # get the winner players
         if(data['radiant_win']):
-            wplayers = data['players'][0:5]
+            wplayers=data['players'][0:5]
         else:
-            wplayers = data['players'][5:10]
-        hero_vitem = []
-        rec_vitem = []
+            wplayers=data['players'][5:10]
+        hero_vitem=[]
+        rec_vitem=[]
         for p in wplayers:
             # vital items that we consider
-            vitem = dict()
-            purchase = p['purchase']
-            hid = p['hero_id']
+            vitem=dict()
+            purchase=p['purchase']
+            hid=p['hero_id']
             #print "purchase length of hero " + str(hid) + ": " + str(len(purchase))
             for k in purchase:
-                iid = items[k]
-                if item_costs[k] >= 500:
-                    # if dummy_is_vital(iid):
-                    vitem[k] = purchase[k]
+                iid=items[k]
+                if icosts[k]>=500:
+                #if dummy_is_vital(iid):
+                    vitem[k]=purchase[k]
             hero_vitem.append(vitem)
             print hid2name[hid]
             print "actual purchase: "
             print vitem
             #print "hero item avg count: " + str(hero_item_count[hid])
-            rec = base_rec_h(hid, model, hero_item_count[hid])
+            
+            rec=base_rec_h(hid, model, len(vitem))
             rec_vitem.append(rec)
             # print recommended items
             print "recommended: "
-            rec_name = [iid2name[iid] for iid in rec]
+            rec_name=[iid2name[iid] for iid in rec]
             print rec_name
             print ""
-        sim = team_purchase_sim_calc(hero_vitem, rec_vitem)
-        print "rec-actual item purchase similarity of match " + \
-            str(fname) + ": " + str(sim)
+        #print hero_vitem
+        #print rec_vitem
+        sim=team_purchase_sim_calc(hero_vitem, rec_vitem)
+        print "rec-actual item purchase similarity of match " + str(fname) + ": " + str(sim)
         if not np.isnan(sim):
-            sim_sum = (sim_sum*mcount+sim)/(mcount+1)
-            mcount += 1
+            sim_sum=(sim_sum*mcount+sim)/(mcount+1)
+            mcount+=1
     print "all winners similarity avg: " + str(sim_sum)
 
 # sufficiency evaluation
@@ -150,7 +152,7 @@ def feature_vec(dic1, arr2):
     vec2 = [0]*len(kvec)
     for iid in arr2:
         name = iid2name[iid]
-        if iid2name[iid] in kvec:
+        if name in kvec:
             index = kvec.index(name)
             vec2[index] = 1
         else:
@@ -211,4 +213,4 @@ for item_count_list in hero_num_item_records:
     else:
         hero_item_count.append(int(round(sum(item_count_list) / float(len(item_count_list)))))
 
-nec_eva('../test/', basic_freq, item_name_id_mapping, hero_item_count)
+nec_eva('../test/', basic_freq, item_name_id_mapping, hero_item_count, item_costs)
