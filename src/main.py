@@ -193,7 +193,7 @@ for match_file_name in os.listdir(DATA_FILE_PATH):
         num_purchased_items = count_purchased_items(purchases)
         hero_num_item_records[hero_id].append(num_purchased_items)
 
-        win = player['isRadiant'] and player['radiant_win']
+        win = player['isRadiant'] == player['radiant_win']
 
         for item_name in purchases:
             item_id = item_name_id_mapping[item_name]
@@ -212,4 +212,3 @@ for item_count_list in hero_num_item_records:
         hero_item_count.append(int(round(sum(item_count_list) / float(len(item_count_list)))))
 
 nec_eva('../test/', basic_freq, item_name_id_mapping, hero_item_count)
-print basic_freq[1]
